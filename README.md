@@ -110,7 +110,7 @@ Json Example: (with possibility value)
 
 **Integer:**
 
-Fieds:
+Fields:
 ```
 "min":   (Integer) Min Value
 "max":   (Integer) Max value
