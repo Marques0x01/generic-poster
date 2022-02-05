@@ -91,7 +91,7 @@ Fieds:
 Default value:
 Random lowercase string 50 characteres
 
-Json Example: (with possibilitie value)
+Json Example: (with possibility value)
 
 ```
         {
