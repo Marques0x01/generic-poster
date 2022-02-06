@@ -23,6 +23,8 @@ Send a body POST request to the endpoints and fields configuration below.
 ```
 POST - /dynamo
 POST - /sqs
+POST - /kafka -> Post random messages in a topic
+POST - /kafka-schema -> Post random messages in a topic validating value with schema registry
 ```
 
 
@@ -37,13 +39,25 @@ Fields:
 "amount": (Integer) Amount of objects to be generate
 
 (REQUIRED)
+"data":   (Array) Fields configurations to be created
+
+(REQUIRED FOR DYNAMO)
 "table":  (String) Table name on dynamo. Exclusive for /dynamo request
 
-(REQUIRED)
+(REQUIRED FOR SQS)
 "queue":  (String) Queue name on SQS. Exclusive for /sqs request
 
-(REQUIRED)
-"data":   (Array) Fields configurations to be created
+(REQUIRED FOR KAFKA)
+"broker":  (String) Queue name on SQS. Exclusive for /sqs request
+
+(REQUIRED FOR KAFKA)
+"topic":  (String) Queue name on SQS. Exclusive for /sqs request
+
+(REQUIRED FOR KAFKA-SCHEMA)
+"subject":  (String) Queue name on SQS. Exclusive for /sqs request
+
+(REQUIRED FOR KAFKA-SCHEMA)
+"schema_registry":  (String) Queue name on SQS. Exclusive for /sqs request
 ```
 Json example:
 ```
@@ -76,7 +90,8 @@ Json example:
 "possibilities": (Array) Possible values for this field   
 ```
 
-
+Priority:
+Default > Possibilities > Any field configuration > Normal Processing
 
 ### **Field Configuration:**
 
@@ -86,7 +101,11 @@ Fieds:
 ```
 "lower_case":     (Boolean) Lowercase string if true and uppercase otherwise
 "amount_chars":   (Integer) Characters amount in string
+"uuid":           (Integer) Generate UUID string
 ```
+
+Priority:
+UUID > Normal processing
 
 Default value:
 Random lowercase string 50 characteres
@@ -98,6 +117,7 @@ Json Example: (with possibility value)
             "name": "CHVE_PK",
             "type": "str",
             "field_config": {
+                "uuid": false,
                 "lower_case": false,
                 "amount_chars": 10
             },
@@ -163,6 +183,9 @@ Json Example: (with default value)
 "max":   (Integer) Max value
 ```
 
+Default value:
+Min = 0 | Max = 1000000
+
 Json Example: 
 
 ```
@@ -203,6 +226,7 @@ Json Example:
                         "name": "street",
                         "type": "str",
                         "field_config": {
+                            "uuid": false,
                             "lower_case": true,
                             "amount_chars": 50
                         },
@@ -223,6 +247,7 @@ Json Example:
                         "name": "city",
                         "type": "str",
                         "field_config": {
+                            "uuid": false,
                             "lower_case": false,
                             "amount_chars": 15
                         },
@@ -265,6 +290,7 @@ Json Example:
                             "name": "nome",
                             "type": "str",
                             "field_config": {
+                                "uuid": false,
                                 "lower_case": false,
                                 "amount_chars": 10
                             },
@@ -346,6 +372,7 @@ Json Example:
                                         "name": "street",
                                         "type": "str",
                                         "field_config": {
+                                            "uuid": false,
                                             "lower_case": true,
                                             "amount_chars": 50
                                         },
@@ -366,6 +393,7 @@ Json Example:
                                         "name": "city",
                                         "type": "str",
                                         "field_config": {
+                                            "uuid": false,
                                             "lower_case": false,
                                             "amount_chars": 15
                                         },
@@ -398,6 +426,7 @@ Json Example:
             "name": "CHVE_PK",
             "type": "str",
             "field_config": {
+                "uuid": false,
                 "lower_case": false,
                 "amount_chars": 10
             },
@@ -455,6 +484,7 @@ Json Example:
                             "name": "nome",
                             "type": "str",
                             "field_config": {
+                                "uuid": false,
                                 "lower_case": false,
                                 "amount_chars": 10
                             },
@@ -536,6 +566,7 @@ Json Example:
                                         "name": "street",
                                         "type": "str",
                                         "field_config": {
+                                            "uuid": false,
                                             "lower_case": true,
                                             "amount_chars": 50
                                         },
@@ -556,6 +587,7 @@ Json Example:
                                         "name": "city",
                                         "type": "str",
                                         "field_config": {
+                                            "uuid": false,
                                             "lower_case": false,
                                             "amount_chars": 15
                                         },
@@ -630,6 +662,88 @@ Json Example:
                                 "type": "int"
                             }
                         }
+                    }
+                ]
+            }
+        }
+    ]
+}
+```
+
+
+
+
+## **KAFKA Example:**
+
+### **Fields Config:**
+
+```
+    "broker":           (STRING) Broker URL
+    "topic":            (STRING) Topic
+    "subject":          (STRING) Topic subject name
+    "schema_registry":  (STRING) Schema Registry URL
+```
+
+It's required to create a data with the object and header.
+kafka-schema endpoint it will validate the value with schema registry.
+
+
+**JSON KAFKA EXAMPLE:**
+
+```
+{
+    "amount": 20,
+    "broker": "127.0.0.1:9092",
+    "topic": "python-kafka",
+    "subject": "python-kafka-value",
+    "schema_registry": "http://localhost:8081",
+    "data": [
+        {
+            "name": "key",
+            "type": "string",
+            "field_config": {
+                "uuid": true
+            }
+        },
+        {
+            "name": "header",
+            "type": "object",
+            "field_config": {
+                "fields": [
+                    {
+                        "name": "id",
+                        "type": "string"
+                    },
+                    {
+                        "name": "transactionid",
+                        "type": "string"
+                    },
+                    {
+                        "name": "time",
+                        "type": "date",
+                        "field_config": {
+                            "with_time": true
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "payload",
+            "type": "object",
+            "field_config": {
+                "fields": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "email",
+                        "type": "string"
+                    },
+                    {
+                        "name": "age",
+                        "type": "int"
                     }
                 ]
             }
