@@ -3,7 +3,9 @@ from confluent_kafka import Producer
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroSerializer
 from confluent_kafka.serialization import StringSerializer
+from Services.Process.ValidationService import ValidationService
 import logging
+import uuid
 
 class KafkaService:
 
@@ -21,8 +23,14 @@ class KafkaService:
 
             producer = SerializingProducer(producer_configs)
 
-            for object in objects:
-                producer.produce(topic, value=object["payload"], key=object["key"], headers=object["header"], on_delivery=self.__delivery_report)
+
+
+            for obj in objects:
+                key = str(uuid.uuid4()) if "key" not in obj or obj["key"] is not None else obj["key"] 
+
+                ValidationService.check_type(key, "str")
+
+                producer.produce(topic, value=obj["payload"], key=key, headers=obj["header"], on_delivery=self.__delivery_report)
 
             producer.flush()
         except Exception as error:
@@ -34,8 +42,12 @@ class KafkaService:
         try:
             producer = Producer({'bootstrap.servers': self.bootstrap_server})
             
-            for object in objects:
-                producer.produce(topic, value=str(object["payload"]).encode('utf-8'), key=object["key"], headers=object["header"], on_delivery=self.__delivery_report)
+            for obj in objects:
+                key = str(uuid.uuid4()) if "key" not in obj or obj["key"] is not None else obj["key"] 
+
+                ValidationService.check_type(key, "str")
+
+                producer.produce(topic, value=str(obj["payload"]).encode('utf-8'), key=key, headers=obj["header"], on_delivery=self.__delivery_report)
                 producer.poll(0.1)
                 producer.flush()
         except Exception as error:
