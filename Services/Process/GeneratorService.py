@@ -99,7 +99,10 @@ class GeneratorService:
             else:
                 date = date.date()
 
-            return str(date)
+            if ValidationService.field_exists(field_config, "as_string") and field_config["as_string"]:
+                return str(date)
+
+            return date
         except Exception as ex:
             log.error(f"Error on creating date: {ex}")
             raise ex
