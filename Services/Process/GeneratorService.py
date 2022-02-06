@@ -1,6 +1,7 @@
 import random
 import string
 import datetime
+from uuid import uuid4
 from Services.Process.ValidationService import ValidationService
 import logging as log
 
@@ -46,6 +47,9 @@ class GeneratorService:
 
     def __generate_string(self, field_config):
         try:
+            if ("uuid" in field_config and field_config["uuid"] is not None and field_config["uuid"]):
+                return str(uuid4())
+
             letters = string.ascii_lowercase if "lower_case" not in field_config or field_config["lower_case"] is None or field_config[
                 "lower_case"] else string.ascii_uppercase
 
@@ -90,15 +94,12 @@ class GeneratorService:
         try:
             date = self.__generate_random_date(field_config)
             if ValidationService.field_exists(field_config, "with_time") and field_config["with_time"]:
-                time = self.__generate_random_time(field_config["time"])
+                time = self.__generate_random_time(field_config)
                 date = date + time
             else:
                 date = date.date()
 
-            if ValidationService.field_exists(field_config, "as_string") and field_config["as_string"]:
-                date = str(date)
-
-            return date
+            return str(date)
         except Exception as ex:
             log.error(f"Error on creating date: {ex}")
             raise ex
