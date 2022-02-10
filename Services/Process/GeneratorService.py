@@ -18,13 +18,13 @@ class GeneratorService:
 
     def generate_default_value(self, item):
         try:
-            ValidationService.check_type(item["default"], item["field_config"]["type"])
+            ValidationService.check_type(item["default"], item["type"])
             return item["default"]
         except Exception as ex:
             log.error(f"Error on creating default value: {ex}")
             raise ex
 
-    def generate_random_value(self, field_config):
+    def generate_random_value(self, item):
         try:
             return {
                 'str': self.__generate_string,
@@ -39,67 +39,83 @@ class GeneratorService:
                 'date': self.__generate_date,
                 'object': self.__generate_object,
                 'array': self.__generate_array
-            }.get(field_config["type"], None)(field_config)
+            }.get(item["type"], None)(item)
         except Exception as ex:
             log.error(f"Error on creating value: {ex}")
             raise ex
 
 
-    def __generate_string(self, field_config):
+    def __generate_string(self, item):
         try:
-            if ("uuid" in field_config and field_config["uuid"] is not None and field_config["uuid"]):
+            if not ValidationService.field_exists(item, "field_config"):
+                return ''.join(random.choice(string.ascii_lowercase) for _ in range(50))
+
+            if ("uuid" in item["field_config"] and item["field_config"]["uuid"] is not None and item["field_config"]["uuid"]):
                 return str(uuid4())
 
-            letters = string.ascii_lowercase if "lower_case" not in field_config or field_config["lower_case"] is None or field_config[
+            letters = string.ascii_lowercase if "lower_case" not in item["field_config"] or item["field_config"]["lower_case"] is None or item["field_config"][
                 "lower_case"] else string.ascii_uppercase
 
-            if ValidationService.field_exists(field_config, "amount_chars"):
-                if field_config["amount_chars"] > 0:
-                    return ''.join(random.choice(letters) for _ in range(field_config["amount_chars"]))
-                log.warn("String amount chars configured less than zero")
+            if ValidationService.field_exists(item["field_config"], "amount_chars"):
+                if item["field_config"]["amount_chars"] > 0:
+                    return ''.join(random.choice(letters) for _ in range(item["field_config"]["amount_chars"]))
+                log.warn("String amount chars configured is equal or less than zero")
 
             return ''.join(random.choice(letters) for _ in range(50))
         except Exception as ex:
             log.error(f"Error on creating string: {ex}")
             raise ex
 
-    def __generate_integer(self, field_config):
+    def __generate_integer(self, item):
         try:
-            min = 0 if not ValidationService.field_exists(field_config, "min") else field_config["min"]
-            max = 1000000 if not ValidationService.field_exists(field_config, "max") else field_config["max"]
+            if not ValidationService.field_exists(item, "field_config"):
+                return random.randint(0, 1000000)
+
+            min = 0 if not ValidationService.field_exists(item["field_config"], "min") else item["field_config"]["min"]
+            max = 1000000 if not ValidationService.field_exists(item["field_config"], "max") else item["field_config"]["max"]
+
             ValidationService.check_min_max_valid(min, max)
+
             return random.randint(min, max)
         except Exception as ex:
             log.error(f"Error on creating integer: {ex}")
             raise ex
 
-    def __generate_double(self, field_config):
+    def __generate_double(self, item):
         try:
-            min = 0 if not ValidationService.field_exists(field_config, "min") else field_config["min"]
-            max = 1000000 if not ValidationService.field_exists(field_config, "max") else field_config["max"]
+            if not ValidationService.field_exists(item, "field_config"):
+                return "{:.2f}".format(random.uniform(0, 1000000))
+
+            min = 0 if not ValidationService.field_exists(item["field_config"], "min") else item["field_config"]["min"]
+            max = 1000000 if not ValidationService.field_exists(item["field_config"], "max") else item["field_config"]["max"]
+
             ValidationService.check_min_max_valid(min, max)
             return "{:.2f}".format(random.uniform(min, max))
         except Exception as ex:
             log.error(f"Error on creating double: {ex}")
             raise ex
 
-    def __generate_boolean(self, field_config):
+    def __generate_boolean(self, item):
         try:
             return bool(random.getrandbits(1))
         except Exception as ex:
             log.error(f"Error on creating boolean: {ex}")
             raise ex
 
-    def __generate_date(self, field_config):
+    def __generate_date(self, item):
         try:
-            date = self.__generate_random_date(field_config)
-            if ValidationService.field_exists(field_config, "with_time") and field_config["with_time"]:
-                time = self.__generate_random_time(field_config)
+            if not ValidationService.field_exists(item, "field_config"):
+                return self.__generate_random_default_date() + self.__generate_random_default_time()
+
+            date = self.__generate_random_date(item["field_config"])
+
+            if ValidationService.field_exists(item["field_config"], "with_time") and item["field_config"]["with_time"]:
+                time = self.__generate_random_time(item["field_config"])
                 date = date + time
             else:
                 date = date.date()
 
-            if ValidationService.field_exists(field_config, "as_string") and field_config["as_string"]:
+            if ValidationService.field_exists(item["field_config"], "as_string") and item["field_config"]["as_string"]:
                 return str(date)
 
             return date
@@ -117,20 +133,29 @@ class GeneratorService:
         if not ValidationService.field_exists(field_config, "year"):
             year = self.__generate_year(1500, 2500)
         else:
-            year = self.__generate_year(date["year"]["min"], date["year"]["max"])
+            min = 1 if not ValidationService.field_exists(date["year"], "min") else date["year"]["min"]
+            max = 30 if not ValidationService.field_exists(date["year"], "max") else date["year"]["max"]
 
-        if not ValidationService.field_exists(field_config, "year"):
-            month = self.__generate_year(1, 12)
+            year = self.__generate_year(min, max)
+
+        if not ValidationService.field_exists(date, "month"):
+            month = self.__generate_month(1, 12)
         else:
-            month = self.__generate_month(date["month"]["min"], date["month"]["max"])
+            min = 1 if not ValidationService.field_exists(date["month"], "min") else date["month"]["min"]
+            max = 30 if not ValidationService.field_exists(date["month"], "max") else date["month"]["max"]
 
-        if not ValidationService.field_exists(field_config, "year"):
-            month = self.__generate_year(1, 30)
+            month = self.__generate_month(min, max)
+
+        if not ValidationService.field_exists(date, "day"):
+            day = self.__generate_day(1, 28) if month == 2 else self.__generate_year(1, 30)
         else:
-            if month == 2 and ValidationService.field_exists(field_config, "year") and date["day"]["max"] > 28:
-                date["day"]["max"] = 28
+            min = 1 if not ValidationService.field_exists(date["day"], "min") else date["day"]["min"]
+            max = 30 if not ValidationService.field_exists(date["day"], "max") else date["day"]["max"]
+            
+            max = 28 if month == 2 else max
+             
+            day = self.__generate_year(min, max)
 
-            day = self.__generate_day(date["day"]["min"], date["day"]["max"])
 
         return datetime.datetime(year, month, day, 0, 0, 0)
 
@@ -245,46 +270,79 @@ class GeneratorService:
 
         return random.randint(min_time, max_time)
 
-    def __generate_object(self, fields_config):
+    def __generate_object(self, item):
         try:
+
+            if ValidationService.field_exists(item, "default"):
+                ValidationService.check_type(item["field_config"]["default"], "dict")    
+                return item["field_config"]["default"]
+            
+            if ValidationService.field_exists(item, "possibilities"):
+                ValidationService.check_type(item["possibilities"], "list")
+                if len(item["possibilities"]) > 0:
+                    return GeneratorService.generate_random_possibility(item["possibilities"], item["type"])
+
+            if ValidationService.field_exists(item, "is null") and item["is_null"]:
+                return None
+
+            if not ValidationService.field_exists(item, "fields"):
+                return None
+
             obj = {}
-            for field in fields_config["fields"]:
 
-                if not ValidationService.field_exists(field, "field_config"):
-                    field["field_config"] = {}    
-
-                field["field_config"]["type"] = field["type"]
+            for field in item["fields"]:
+                
+                ValidationService.check_null(field["type"], "type")
 
                 if ValidationService.field_exists(field, "default"):
-                    obj[field["name"]] = self.generate_default_value(field)
+                    obj[field["name"]] = GeneratorService.generate_default_value(field)
                     continue
 
                 if ValidationService.field_exists(field, "possibilities"):
-                    ValidationService.check_type(field["possibilities"], list)
+                    ValidationService.check_type(field["possibilities"], "list")
                     if len(field["possibilities"]) > 0:
-                        obj[field["name"]] = self.generate_random_possibility(
-                            field["possibilities"], field["field_config"]["type"])
+                        obj[field["name"]] = GeneratorService.generate_random_possibility(
+                            field["possibilities"], item["type"])
                         continue
-                    log.warn(f"There is not 'possibilities' to choose... Generating random value for {item['name']}")
+                    log.warn(f"There is not 'possibilities' to choose... Generating random value for {field['name']}")
 
-                obj[field["name"]] = self.generate_random_value(field["field_config"])
+                obj[field["name"]] = GeneratorService().generate_random_value(field)
+
             return obj
         except Exception as ex:
             log.error(f"Error on creating object: {ex}")
             raise ex
 
-    def __generate_array(self, field_config):
+    def __generate_array(self, item):
         try:
             arr = []
 
-            if not ValidationService.field_exists:
+            if ValidationService.field_exists(item, "default"):
+                ValidationService.check_type(item["field_config"]["default"], "list")    
+                return item["field_config"]["default"]
+
+
+            if ValidationService.field_exists(item, "possibilities"):
+                ValidationService.check_type(item["possibilities"], "list")
+                if len(item["possibilities"]) > 0:
+                    return GeneratorService.generate_random_possibility(item["possibilities"], item["type"])
+
+            if ValidationService.field_exists(item, "is_null") and item["is_null"]:
                 return arr
 
-            ValidationService.check_type(field_config["amount"], "int")
+            if not ValidationService.field_exists(item, "field_config") and not ValidationService.field_exists(item["field_config"], "amount"):
+                return arr
+
+
+            if not ValidationService.field_exists(item["field_config"], "array_data_config"):
+                return arr
+
+            ValidationService.check_null(item["field_config"]["amount"], "amount")
+            ValidationService.check_type(item["field_config"]["amount"], "int")
         
-            for _ in range(field_config["amount"]):
-                arr.append(self.generate_random_value(
-                    field_config["array_data_config"]))
+            for _ in range(item["field_config"]["amount"]):
+                arr.append(self.generate_random_value(item["field_config"]["array_data_config"]))
+
             return arr
         except Exception as ex:
             log.error(f"Error on creating array: {ex}")

@@ -30,7 +30,7 @@ def save_dynamo():
 
         log.info(f"Data created: {obj}")
 
-        DynamoService().save_item(objects, json_dict["table"])
+        # DynamoService().save_item(objects, json_dict["table"])
         return f"{loops} itens saved"
     except Exception as ex:
         log.error(f"Error on saving data: {ex}")
